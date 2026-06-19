@@ -1,8 +1,8 @@
 from fastapi import FastAPI, Query
 from fastapi.middleware.cors import CORSMiddleware
-import pandas as pd
 from pydantic import BaseModel
 from typing import List
+import pandas as pd
 
 app = FastAPI()
 
@@ -13,7 +13,15 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# -------------------------
+# Student API
+# -------------------------
+
 df = pd.read_csv("q-fastapi.csv")
+
+@app.get("/")
+def root():
+    return {"message": "Student API Running"}
 
 @app.get("/api")
 def get_students(class_: list[str] | None = Query(None, alias="class")):
@@ -26,9 +34,9 @@ def get_students(class_: list[str] | None = Query(None, alias="class")):
         "students": data.to_dict(orient="records")
     }
 
-@app.get("/")
-def root():
-    return {"message": "Student API Running"}
+# -------------------------
+# Sentiment API
+# -------------------------
 
 class SentimentRequest(BaseModel):
     sentences: List[str]
@@ -39,13 +47,22 @@ def sentiment(req: SentimentRequest):
     happy_words = {
         "love", "great", "awesome", "excellent", "good",
         "happy", "amazing", "wonderful", "fantastic", "like",
-        "best", "beautiful", "nice", "enjoy"
+        "best", "beautiful", "nice", "enjoy", "thrilled",
+        "excited", "positive", "outstanding", "perfect",
+        "brilliant", "superb", "delightful", "pleased",
+        "joy", "joyful", "glad", "success", "successful",
+        "win", "winning", "loved", "liked"
     }
 
     sad_words = {
         "sad", "terrible", "bad", "hate", "awful",
         "horrible", "worst", "angry", "disappointed",
-        "upset", "poor", "boring"
+        "upset", "poor", "boring", "miserable",
+        "negative", "failure", "failed", "loser",
+        "losing", "depressed", "unhappy", "regret",
+        "regrettable", "disaster", "annoying",
+        "frustrated", "frustrating", "pathetic",
+        "useless", "disappointing", "hated"
     }
 
     results = []
@@ -53,9 +70,17 @@ def sentiment(req: SentimentRequest):
     for sentence in req.sentences:
         text = sentence.lower()
 
-        if any(word in text for word in happy_words):
+        happy_score = sum(
+            1 for word in happy_words if word in text
+        )
+
+        sad_score = sum(
+            1 for word in sad_words if word in text
+        )
+
+        if happy_score > sad_score:
             sentiment = "happy"
-        elif any(word in text for word in sad_words):
+        elif sad_score > happy_score:
             sentiment = "sad"
         else:
             sentiment = "neutral"
@@ -66,6 +91,7 @@ def sentiment(req: SentimentRequest):
         })
 
     return {"results": results}
+
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run(app, host="127.0.0.1", port=8000)
