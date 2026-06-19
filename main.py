@@ -1,9 +1,10 @@
 from fastapi import FastAPI, Query
 from fastapi.middleware.cors import CORSMiddleware
 import pandas as pd
+from textblob import TextBlob
 from pydantic import BaseModel
 from typing import List
-import re
+
 
 app = FastAPI()
 
@@ -37,42 +38,14 @@ class SentimentRequest(BaseModel):
 @app.post("/sentiment")
 def sentiment(req: SentimentRequest):
 
-    happy_words = {
-        "love","great","awesome","excellent","good","happy",
-        "amazing","wonderful","fantastic","like","best",
-        "beautiful","nice","enjoy","thrilled","excited",
-        "positive","outstanding","perfect","brilliant",
-        "superb","delightful","pleased","joy","joyful",
-        "glad","success","successful","win","winning",
-        "smile","cheerful","satisfied","favorite","favourite",
-        "incredible","remarkable","thankful","grateful",
-        "loved","lovely","adore","adored","celebrate"
-    }
-
-    sad_words = {
-        "sad","terrible","bad","hate","awful","horrible",
-        "worst","angry","disappointed","upset","poor",
-        "boring","miserable","negative","failure","failed",
-        "loser","losing","depressed","unhappy","regret",
-        "regrettable","disaster","annoying","frustrated",
-        "frustrating","pathetic","useless","disappointing",
-        "cry","crying","hurt","pain","painful","tragic",
-        "unfortunate","sucks","suck","fear","worried",
-        "anxious","stress","stressed","lonely","broken"
-    }
-
     results = []
 
     for sentence in req.sentences:
-        text = re.sub(r'[^a-zA-Z ]', ' ', sentence.lower())
-        words = set(text.split())
+        polarity = TextBlob(sentence).sentiment.polarity
 
-        happy_score = len(words & happy_words)
-        sad_score = len(words & sad_words)
-
-        if happy_score > sad_score:
+        if polarity > 0.1:
             sentiment = "happy"
-        elif sad_score > happy_score:
+        elif polarity < -0.1:
             sentiment = "sad"
         else:
             sentiment = "neutral"
